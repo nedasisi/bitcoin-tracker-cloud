@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files
+data/
+*.duckdb
+*.parquet
+*.csv
+
+# Logs
+*.log
+
+# Config with secrets (on va créer un template)
+config_local.yaml
+
+# Test files
+test_*.py
+debug_*.py
+FINAL_CHECK.py
+SOLUTION.py
+fix_*.py
+
+# Personal notes
+notes.txt
+TODO.txt
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db

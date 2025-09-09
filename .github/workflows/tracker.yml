@@ -1,0 +1,88 @@
+name: Bitcoin Volume Tracker 24/7
+
+on:
+  schedule:
+    # Relancer toutes les 5h50 (GitHub limite à 6h par workflow)
+    - cron: '50 */5 * * *'
+  
+  workflow_dispatch:  # Permet le lancement manuel
+    inputs:
+      test_mode:
+        description: 'Run in test mode (5 min only)'
+        required: false
+        default: 'false'
+
+jobs:
+  track-volume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350  # 5h50 minutes
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install websocket-client requests
+    
+    - name: Test notification (on manual trigger)
+      if: github.event_name == 'workflow_dispatch'
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        python -c "
+        import requests
+        import os
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+        message = '🔔 <b>Test Alert</b>\n\nGitHub Actions workflow started successfully!\n\nBitcoin tracker will begin monitoring...'
+        requests.post(url, json={'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'})
+        print('Test notification sent!')
+        "
+    
+    - name: Run Bitcoin Tracker
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
+          echo "Running in test mode for 5 minutes..."
+          timeout 300 python cloud_tracker.py || true
+        else
+          echo "Running tracker for 5h50..."
+          python cloud_tracker.py
+        fi
+    
+    - name: Send completion notification
+      if: always()
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        python -c "
+        import requests
+        import os
+        from datetime import datetime
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+        status = '✅ Completed' if '${{ job.status }}' == 'success' else '❌ Failed'
+        message = f'📊 <b>Tracker Status Update</b>\n\nStatus: {status}\nTime: {datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")}\n\nNext run in ~10 minutes...'
+        requests.post(url, json={'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'})
+        "
