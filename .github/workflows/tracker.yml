@@ -3,7 +3,7 @@ name: Bitcoin Volume Tracker 24/7
 on:
   schedule:
     # Relancer toutes les 5h50 (GitHub limite à 6h par workflow)
-   # - cron: '50 */5 * * *'
+  #   - cron: '50 */5 * * *'  # Désactivé pour éviter les frais
   
   workflow_dispatch:  # Permet le lancement manuel
     inputs:
