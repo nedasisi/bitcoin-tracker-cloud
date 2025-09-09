@@ -63,10 +63,10 @@ jobs:
       run: |
         if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
           echo "Running in test mode for 5 minutes..."
-          timeout 300 python cloud_tracker.py || true
+          timeout 300 python cloud_tracker_advanced.py || true
         else
           echo "Running tracker for 5h50..."
-          python cloud_tracker.py
+          python cloud_tracker_advanced.py
         fi
     
     - name: Send completion notification
